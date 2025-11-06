@@ -1,5 +1,5 @@
-// FIX: Changed CommonJS `require` to ES Modules `import` to resolve TypeScript error.
-import { google } from 'googleapis';
+// USE CommonJS syntax to match the Vercel Node.js runtime environment.
+const { google } = require('googleapis');
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Define the types within this file to make the function self-contained.
@@ -27,8 +27,8 @@ interface Order {
   timestamp: string;
 }
 
-// FIX: Changed CommonJS `module.exports` to ES Modules `export default` to resolve TypeScript error.
-export default async (req: VercelRequest, res: VercelResponse) => {
+// USE CommonJS module.exports
+module.exports = async (req: VercelRequest, res: VercelResponse) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
