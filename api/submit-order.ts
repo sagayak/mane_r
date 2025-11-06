@@ -31,8 +31,8 @@ const { google } = require('googleapis');
 
 /**
  * Handles the incoming order submission request.
- * @param {import('@vercel/node').VercelRequest} req The Vercel request object.
- * @param {import('@vercel/node').VercelResponse} res The Vercel response object.
+ * @param req The Vercel request object, containing the order in the body.
+ * @param res The Vercel response object, used to send a response back to the client.
  */
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
