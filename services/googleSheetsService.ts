@@ -1,43 +1,30 @@
-
 import type { Order } from '../types';
 
 /**
- * WARNING: This is a simulation for a frontend-only application.
- * In a real-world scenario, you should NEVER expose credentials like a private key on the client side.
- * This logic must be moved to a secure backend environment (e.g., a Vercel/Netlify function, a Node.js server)
- * which would then use the credentials to communicate with the Google Sheets API.
- * 
- * This function simulates sending an order to a backend that writes to Google Sheets.
+ * Submits an order to the secure backend serverless function.
  */
 export const submitOrder = async (order: Order): Promise<{ success: boolean; message: string }> => {
-  console.log("--- SIMULATING ORDER SUBMISSION TO GOOGLE SHEETS ---");
-  
-  const orderRows = order.items.map(item => [
-    order.id,
-    order.timestamp,
-    `${order.address.tower}-${order.address.floor}-${order.address.flat}`,
-    order.address.name,
-    order.address.phone,
-    item.name,
-    item.quantity,
-    item.price,
-    item.quantity * item.price
-  ]);
-  
-  console.log("Order ID:", order.id);
-  console.log("Timestamp:", order.timestamp);
-  console.log("Customer:", `${order.address.name} (${order.address.phone})`);
-  console.log("Address:", `${order.address.tower}-${order.address.floor}-${order.address.flat}`);
-  console.log("Total: ₹", order.total);
-  console.log("Data that would be sent to the sheet (with headers):");
-  console.table(orderRows, ["Order ID", "Timestamp", "Address", "Name", "Phone", "Item", "Qty", "Price", "Subtotal"]);
+  try {
+    const response = await fetch('/api/submit-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(order),
+    });
 
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+    const result = await response.json();
 
-  console.log("--- SIMULATION COMPLETE ---");
+    if (!response.ok) {
+      // Use the error message from the backend if available, otherwise a generic one.
+      throw new Error(result.message || 'An error occurred while submitting the order.');
+    }
 
-  // In a real application, you would handle potential errors from your backend/Google Sheets API.
-  // For this simulation, we will always return success.
-  return { success: true, message: "Order placed successfully!" };
+    return { success: true, message: result.message };
+  } catch (error) {
+    console.error("Error submitting order:", error);
+    // Ensure error is a string
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, message: message };
+  }
 };
