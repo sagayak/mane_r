@@ -1,41 +1,48 @@
 // USE CommonJS syntax to match the Vercel Node.js runtime environment.
 const { google } = require('googleapis');
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Define the types within this file to make the function self-contained.
-interface CartItem {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  quantity: number;
-}
+/**
+ * @typedef {object} CartItem
+ * @property {number} id
+ * @property {string} name
+ * @property {string} description
+ * @property {number} price
+ * @property {number} quantity
+ */
 
-interface Address {
-  tower: string;
-  floor: string;
-  flat: string;
-  name?: string;
-  phone?: string;
-}
+/**
+ * @typedef {object} Address
+ * @property {string} tower
+ * @property {string} floor
+ * @property {string} flat
+ * @property {string} [name]
+ * @property {string} [phone]
+ */
 
-interface Order {
-  id: string;
-  items: CartItem[];
-  total: number;
-  address: Address;
-  timestamp: string;
-}
+/**
+ * @typedef {object} Order
+ * @property {string} id
+ * @property {CartItem[]} items
+ * @property {number} total
+ * @property {Address} address
+ * @property {string} timestamp
+ */
 
-// USE CommonJS module.exports
-module.exports = async (req: VercelRequest, res: VercelResponse) => {
+/**
+ * Handles the incoming order submission request.
+ * @param {import('@vercel/node').VercelRequest} req The Vercel request object.
+ * @param {import('@vercel/node').VercelResponse} res The Vercel response object.
+ */
+module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
   }
 
   try {
-    const order: Order = req.body;
+    /** @type {Order} */
+    const order = req.body;
 
     // 1. Authenticate with Google Sheets
     let auth;
