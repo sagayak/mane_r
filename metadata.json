@@ -1,0 +1,5 @@
+{
+  "name": "ಮನೆ Rotti",
+  "description": "An application for residents of an apartment complex to order meals from 'ಮನೆ Rotti', a local cloud kitchen. Users can browse the menu, add items to their cart, specify their address, and place an order.",
+  "requestFramePermissions": []
+}
