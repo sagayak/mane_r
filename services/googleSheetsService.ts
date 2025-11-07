@@ -1,30 +1,22 @@
-import type { Order } from '../types';
+import { CartItem, Address } from '../types';
 
-/**
- * Submits an order to the secure backend serverless function.
- */
-export const submitOrder = async (order: Order): Promise<{ success: boolean; message: string }> => {
+export async function appendOrder(cart: CartItem[], address: Address, total: number): Promise<void> {
   try {
     const response = await fetch('/api/submit-order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(order),
+      body: JSON.stringify({ cart, address, total }),
     });
 
-    const result = await response.json();
-
     if (!response.ok) {
-      // Use the error message from the backend if available, otherwise a generic one.
-      throw new Error(result.message || 'An error occurred while submitting the order.');
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to submit order.');
     }
-
-    return { success: true, message: result.message };
   } catch (error) {
-    console.error("Error submitting order:", error);
-    // Ensure error is a string
-    const message = error instanceof Error ? error.message : String(error);
-    return { success: false, message: message };
+    console.error('Error in appendOrder:', error);
+    // Re-throw the error so it can be caught by the calling component
+    throw error;
   }
-};
+}

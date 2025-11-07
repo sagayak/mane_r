@@ -1,5 +1,5 @@
 {
-  "name": "ಮನೆ Rotti",
-  "description": "An application for residents of an apartment complex to order meals from 'ಮನೆ Rotti', a local cloud kitchen. Users can browse the menu, add items to their cart, specify their address, and place an order.",
+  "name": "Copy of MR Cloud Kitchen",
+  "description": "A simple and elegant ordering application for a cloud-based kitchen. Users can browse menu items, add them to a cart, specify their address, and place an order directly to a Google Sheet.",
   "requestFramePermissions": []
 }

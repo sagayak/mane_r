@@ -1,120 +1,107 @@
 
 import React, { useState, useMemo } from 'react';
-import Header from './components/Header';
-import Menu from './components/Menu';
-import CartView from './components/CartView';
-import OrderConfirmation from './components/OrderConfirmation';
-import FloatingCartButton from './components/FloatingCartButton';
-import { submitOrder } from './services/googleSheetsService';
-import type { CartItem, MenuItem, Address, Order } from './types';
+import { Product, CartItem, Address } from './types';
 import { MENU_ITEMS } from './constants';
-
-type View = 'menu' | 'cart' | 'confirmation';
+import { appendOrder } from './services/googleSheetsService';
+import Header from './components/Header';
+import ProductList from './components/ProductList';
+import CartIcon from './components/CartIcon';
+import CartView from './components/CartView';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('menu');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'placing' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
-  const cartItemCount = useMemo(() => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  }, [cart]);
-  
-  const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  }, [cart]);
-
-  const handleAddToCart = (item: MenuItem) => {
+  const handleAddToCart = (product: Product) => {
     setCart(prevCart => {
-      const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+      const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {
-        return prevCart.map(cartItem =>
-          cartItem.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
+        return prevCart.map(item =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prevCart, { ...item, quantity: 1 }];
+      return [...prevCart, { ...product, quantity: 1 }];
     });
   };
 
-  const handleUpdateQuantity = (itemId: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      handleRemoveFromCart(itemId);
+  const handleUpdateQuantity = (productId: number, quantity: number) => {
+    if (quantity <= 0) {
+      setCart(prevCart => prevCart.filter(item => item.id !== productId));
     } else {
       setCart(prevCart =>
         prevCart.map(item =>
-          item.id === itemId ? { ...item, quantity: newQuantity } : item
+          item.id === productId ? { ...item, quantity } : item
         )
       );
     }
   };
-
-  const handleRemoveFromCart = (itemId: number) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== itemId));
-  };
   
-  const handleSubmitOrder = async (address: Address) => {
-    setIsLoading(true);
-    setError(null);
-    const order: Order = {
-      id: new Date().toISOString() + '-' + Math.random().toString(36).substring(2, 9),
-      items: cart,
-      total: cartTotal,
-      address,
-      timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-    };
+  const { totalItems, totalPrice } = useMemo(() => {
+    return cart.reduce(
+      (acc, item) => {
+        acc.totalItems += item.quantity;
+        acc.totalPrice += item.price * item.quantity;
+        return acc;
+      },
+      { totalItems: 0, totalPrice: 0 }
+    );
+  }, [cart]);
 
+  const handleConfirmOrder = async (address: Address) => {
+    setOrderStatus('placing');
     try {
-      const result = await submitOrder(order);
-      if (result.success) {
-        setCart([]);
-        setCurrentView('confirmation');
-      } else {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+      await appendOrder(cart, address, totalPrice);
+      setOrderStatus('success');
+    } catch (error) {
+      console.error('Order submission failed:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred.');
+      setOrderStatus('error');
     }
   };
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'cart':
-        return (
-          <CartView
-            cartItems={cart}
-            onUpdateQuantity={handleUpdateQuantity}
-            onSubmitOrder={handleSubmitOrder}
-            onBackToMenu={() => setCurrentView('menu')}
-            isLoading={isLoading}
-            error={error}
-          />
-        );
-      case 'confirmation':
-        return <OrderConfirmation onNewOrder={() => setCurrentView('menu')} />;
-      case 'menu':
-      default:
-        return <Menu menuItems={MENU_ITEMS} onAddToCart={handleAddToCart} />;
-    }
+  const handlePlaceAnotherOrder = () => {
+    setCart([]);
+    setIsCartOpen(false);
+    setOrderStatus('idle');
+    setErrorMessage('');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
-      <Header cartItemCount={cartItemCount} onCartClick={() => setCurrentView('cart')} />
-      <main className="container mx-auto max-w-4xl p-4 pb-24">
-        {renderView()}
-      </main>
-      {currentView === 'menu' && cart.length > 0 && (
-         <FloatingCartButton 
-            itemCount={cartItemCount} 
-            totalPrice={cartTotal} 
-            onClick={() => setCurrentView('cart')} 
-        />
-      )}
+    <div className="font-sans antialiased text-gray-800">
+      <div className="container mx-auto max-w-lg min-h-screen bg-white shadow-lg relative pb-28">
+        <Header />
+        <main className="p-4">
+          <ProductList
+            products={MENU_ITEMS}
+            cart={cart}
+            onAddToCart={handleAddToCart}
+            onUpdateQuantity={handleUpdateQuantity}
+          />
+        </main>
+        
+        {cart.length > 0 && (
+          <CartIcon 
+            itemCount={totalItems} 
+            totalPrice={totalPrice}
+            onClick={() => setIsCartOpen(true)} 
+          />
+        )}
+        
+        {isCartOpen && (
+          <CartView
+            cart={cart}
+            totalPrice={totalPrice}
+            onClose={() => setIsCartOpen(false)}
+            onUpdateQuantity={handleUpdateQuantity}
+            onConfirmOrder={handleConfirmOrder}
+            orderStatus={orderStatus}
+            errorMessage={errorMessage}
+            onPlaceAnotherOrder={handlePlaceAnotherOrder}
+          />
+        )}
+      </div>
     </div>
   );
 };
